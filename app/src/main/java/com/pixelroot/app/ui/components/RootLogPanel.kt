@@ -16,9 +16,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AdminPanelSettings
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.DeleteSweep
 import androidx.compose.material.icons.rounded.Terminal
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -36,17 +38,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.pixelroot.app.root.RootLogEntry
 
-/**
- * Monochrome Material 3 Root Log Console displayed after executing root on an app or launching SU.
- */
 @Composable
 fun RootLogPanel(
     logs: List<RootLogEntry>,
+    activeManagerPackage: String?,
     onClearLogs: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val clipboardManager = LocalClipboardManager.current
     val context = LocalContext.current
+    val hasDeniedError = logs.any { it.tag == "SU-DENIED" }
 
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -122,6 +123,29 @@ fun RootLogPanel(
                             modifier = Modifier.size(18.dp)
                         )
                     }
+                }
+            }
+
+            if (hasDeniedError && activeManagerPackage != null) {
+                Spacer(modifier = Modifier.height(10.dp))
+                FilledTonalButton(
+                    onClick = {
+                        val intent = context.packageManager.getLaunchIntentForPackage(activeManagerPackage)
+                        if (intent != null) {
+                            context.startActivity(intent)
+                        } else {
+                            Toast.makeText(context, "Unable to launch $activeManagerPackage", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.AdminPanelSettings,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Open Manager to Grant Root")
                 }
             }
 

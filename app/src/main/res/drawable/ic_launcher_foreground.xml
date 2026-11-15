@@ -4,20 +4,29 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- White rounded squircle background -->
+    <!-- White rounded squircle plate inside adaptive safe zone -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M34,26 L74,26 C78.4,26 82,29.6 82,34 L82,74 C82,78.4 78.4,82 74,82 L34,82 C29.6,82 26,78.4 26,74 L26,34 C26,29.6 29.6,26 34,26 Z" />
-    <!-- Outer frame -->
+        android:pathData="M34,22 L74,22 C80.6,22 86,27.4 86,34 L86,74 C86,80.6 80.6,86 74,86 L34,86 C27.4,86 22,80.6 22,74 L22,34 C22,27.4 27.4,22 34,22 Z" />
+    <!-- Outer rounded frame (even-odd cutout) -->
     <path
-        android:fillColor="#0D0D0D"
-        android:pathData="M36,36 L72,36 L72,72 L36,72 Z M39,39 L39,69 L69,69 L69,39 Z" />
-    <!-- Top-left black square -->
+        android:fillColor="#0B0B0B"
+        android:fillType="evenOdd"
+        android:pathData="M31.6,26 L76.4,26 C79.5,26 82,28.5 82,31.6 L82,76.4 C82,79.5 79.5,82 76.4,82 L31.6,82 C28.5,82 26,79.5 26,76.4 L26,31.6 C26,28.5 28.5,26 31.6,26 Z M33,30.5 C31.6,30.5 30.5,31.6 30.5,33 L30.5,75 C30.5,76.4 31.6,77.5 33,77.5 L75,77.5 C76.4,77.5 77.5,76.4 77.5,75 L77.5,33 C77.5,31.6 76.4,30.5 75,30.5 Z" />
+    <!-- Vertical crosshair bar -->
     <path
-        android:fillColor="#0D0D0D"
-        android:pathData="M39,39 L54,39 L54,54 L39,54 Z" />
-    <!-- Bottom-right black square -->
+        android:fillColor="#0B0B0B"
+        android:pathData="M50.9,33.3 L57.1,33.3 L57.1,74.7 L50.9,74.7 Z" />
+    <!-- Horizontal crosshair bar -->
     <path
-        android:fillColor="#0D0D0D"
-        android:pathData="M54,54 L69,54 L69,69 L54,69 Z" />
+        android:fillColor="#0B0B0B"
+        android:pathData="M33.3,50.9 L74.7,50.9 L74.7,57.1 L33.3,57.1 Z" />
+    <!-- Top-right solid square -->
+    <path
+        android:fillColor="#0B0B0B"
+        android:pathData="M59.6,33.3 L74.7,33.3 L74.7,48.4 L59.6,48.4 Z" />
+    <!-- Bottom-left solid square -->
+    <path
+        android:fillColor="#0B0B0B"
+        android:pathData="M33.3,59.6 L48.4,59.6 L48.4,74.7 L33.3,74.7 Z" />
 </vector>

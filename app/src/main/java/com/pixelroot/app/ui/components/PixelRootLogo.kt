@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -19,13 +20,10 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-/**
- * Signature PixelRoot / DFRoot 2x2 checkered emblem rendered in crisp Material 3 Monochrome.
- */
 @Composable
 fun PixelRootEmblem(
     modifier: Modifier = Modifier,
-    size: Dp = 84.dp
+    size: Dp = 88.dp
 ) {
     val containerColor = Color(0xFFFFFFFF)
     val inkColor = Color(0xFF0B0B0B)
@@ -40,30 +38,60 @@ fun PixelRootEmblem(
             .border(1.dp, borderColor, RoundedCornerShape(24.dp)),
         contentAlignment = Alignment.Center
     ) {
-        Canvas(modifier = Modifier.size(size * 0.56f)) {
-            val w = this.size.width
-            val h = this.size.height
-            val halfW = w / 2f
-            val halfH = h / 2f
+        Canvas(modifier = Modifier.size(size * 0.72f)) {
+            val s = this.size.minDimension
+            val strokeW = s * 0.082f
+            val halfStroke = strokeW / 2f
+            val corner = s * 0.10f
 
-            // Top-left dark cell
-            drawRect(
+            // Outer rounded square frame
+            drawRoundRect(
                 color = inkColor,
-                topLeft = Offset(0f, 0f),
-                size = Size(halfW, halfH)
+                topLeft = Offset(halfStroke, halfStroke),
+                size = Size(s - strokeW, s - strokeW),
+                cornerRadius = CornerRadius(corner, corner),
+                style = Stroke(width = strokeW)
             )
-            // Bottom-right dark cell
+
+            // Inner grid bounds with white gap inside frame
+            val innerStart = s * 0.13f
+            val innerEnd = s * 0.87f
+            val innerSpan = innerEnd - innerStart
+            val barThickness = s * 0.11f
+            val barHalf = barThickness / 2f
+            val mid = s / 2f
+            val quadGap = s * 0.045f
+
+            // Vertical crosshair bar
             drawRect(
                 color = inkColor,
-                topLeft = Offset(halfW, halfH),
-                size = Size(halfW, halfH)
+                topLeft = Offset(mid - barHalf, innerStart),
+                size = Size(barThickness, innerSpan)
             )
-            // Outer crisp frame
+
+            // Horizontal crosshair bar
             drawRect(
                 color = inkColor,
-                topLeft = Offset.Zero,
-                size = this.size,
-                style = Stroke(width = 2.6.dp.toPx())
+                topLeft = Offset(innerStart, mid - barHalf),
+                size = Size(innerSpan, barThickness)
+            )
+
+            // Top-right solid square
+            val trLeft = mid + barHalf + quadGap
+            val trBottom = mid - barHalf - quadGap
+            drawRect(
+                color = inkColor,
+                topLeft = Offset(trLeft, innerStart),
+                size = Size(innerEnd - trLeft, trBottom - innerStart)
+            )
+
+            // Bottom-left solid square
+            val blRight = mid - barHalf - quadGap
+            val blTop = mid + barHalf + quadGap
+            drawRect(
+                color = inkColor,
+                topLeft = Offset(innerStart, blTop),
+                size = Size(blRight - innerStart, innerEnd - blTop)
             )
         }
     }
@@ -86,13 +114,11 @@ fun SuManagerBadge(
         Canvas(modifier = Modifier.size(size * 0.58f)) {
             val ink = Color(0xFF0B0B0B)
             if (!isNext) {
-                // KernelSU 2x2 grid badge
                 val half = this.size.width / 2f
                 drawRect(ink, Offset.Zero, Size(half, half))
                 drawRect(ink, Offset(half, half), Size(half, half))
                 drawRect(ink, Offset.Zero, this.size, style = Stroke(width = 1.8.dp.toPx()))
             } else {
-                // KernelSU-Next monochrome yin-yang / split circle badge
                 val radius = this.size.minDimension / 2f
                 drawCircle(color = ink, radius = radius)
                 drawArc(

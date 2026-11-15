@@ -354,6 +354,7 @@ fun PixelRootScreen(
                     ) {
                         RootLogPanel(
                             logs = rootLogs,
+                            activeManagerPackage = RootExecutor.findInstalledManagerPackage(context, selectedManager),
                             onClearLogs = { rootLogs.clear() }
                         )
                     }
@@ -401,6 +402,7 @@ fun PixelRootScreen(
                     } else {
                         RootLogPanel(
                             logs = rootLogs,
+                            activeManagerPackage = RootExecutor.findInstalledManagerPackage(context, selectedManager),
                             onClearLogs = { rootLogs.clear() }
                         )
                     }
