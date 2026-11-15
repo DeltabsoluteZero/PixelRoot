@@ -120,7 +120,7 @@ jobs:
             --lto=${{ inputs.lto_mode }} \
             --local_ram_resources=10240 \
             --jobs=4 \
-            //commmon:kernel_aarch64_dist -- --dist_dir=/mnt/gki/out_dist
+            //common:kernel_aarch64_dist -- --dist_dir=/mnt/gki/out_dist
 
       - name: Package Kernel Images and AnyKernel3 Zip
         working-directory: /mnt/gki
