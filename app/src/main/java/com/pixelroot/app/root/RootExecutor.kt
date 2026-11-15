@@ -7,6 +7,7 @@ import com.pixelroot.app.data.PrefsManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.BufferedReader
+import java.io.File
 import java.io.InputStreamReader
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -36,18 +37,37 @@ data class TargetAppInfo(
 
 object RootExecutor {
 
+    private val suCandidates = listOf(
+        "su",
+        "/system/bin/su",
+        "/system/xbin/su",
+        "/debug_ramdisk/su",
+        "/sbin/su",
+        "/data/adb/ksu/bin/su"
+    )
+
     private fun now(): String {
         val sdf = SimpleDateFormat("HH:mm:ss.SSS", Locale.US)
         return sdf.format(Date())
     }
 
-    fun isPackageInstalled(context: Context, packageName: String): Boolean {
-        return try {
-            context.packageManager.getPackageInfo(packageName, 0)
-            true
+    fun findInstalledManagerPackage(context: Context, manager: SuManagerType): String? {
+        val pm = context.packageManager
+        try {
+            pm.getPackageInfo(manager.packageName, 0)
+            return manager.packageName
         } catch (_: Exception) {
-            false
         }
+        // Fallback: detect spoofed / randomized stub package names by app label
+        val apps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
+        return apps.firstOrNull { appInfo ->
+            val label = pm.getApplicationLabel(appInfo).toString().trim()
+            if (manager == SuManagerType.KERNEL_SU_NEXT) {
+                label.equals("KernelSU-Next", ignoreCase = true)
+            } else {
+                label.equals("KernelSU", ignoreCase = true)
+            }
+        }?.packageName
     }
 
     suspend fun getInstalledUserApps(context: Context): List<TargetAppInfo> =
@@ -66,9 +86,16 @@ object RootExecutor {
                 .sortedBy { it.appName.lowercase(Locale.US) }
         }
 
+    private fun resolveSuBinary(): String {
+        return suCandidates.firstOrNull { path ->
+            path != "su" && File(path).exists()
+        } ?: "su"
+    }
+
     private fun runSuCommand(command: String): Pair<Int, String> {
+        val suBin = resolveSuBinary()
         return try {
-            val process = ProcessBuilder("su", "-c", command)
+            val process = ProcessBuilder(suBin, "-c", command)
                 .redirectErrorStream(true)
                 .start()
             val reader = BufferedReader(InputStreamReader(process.inputStream))
@@ -76,7 +103,7 @@ object RootExecutor {
             val exitCode = process.waitFor()
             Pair(exitCode, output)
         } catch (e: Exception) {
-            Pair(-1, e.message ?: "su binary unavailable")
+            Pair(-1, e.message ?: "su binary unavailable at $suBin")
         }
     }
 
@@ -91,19 +118,20 @@ object RootExecutor {
         logs += RootLogEntry(
             timestamp = now(),
             tag = "PIXELROOT",
-            message = "Initializing ${manager.displayName} bridge (${manager.packageName})..."
+            message = "Initializing ${manager.displayName} bridge..."
         )
 
-        val managerInstalled = isPackageInstalled(context, manager.packageName)
+        val detectedPkg = findInstalledManagerPackage(context, manager)
         logs += RootLogEntry(
             timestamp = now(),
             tag = manager.tag,
-            message = if (managerInstalled) {
-                "Manager package detected: ${manager.packageName} [INSTALLED]"
+            message = if (detectedPkg != null) {
+                val suffix = if (detectedPkg != manager.packageName) " (spoofed stub)" else ""
+                "Manager detected: $detectedPkg$suffix [INSTALLED]"
             } else {
-                "Manager package ${manager.packageName} not found in user space; probing su daemon directly..."
+                "Manager package not matched in user space; probing su daemon directly..."
             },
-            isSuccess = managerInstalled
+            isSuccess = detectedPkg != null
         )
 
         if (prefs.disableKsuModules) {
@@ -170,7 +198,7 @@ object RootExecutor {
             logs += RootLogEntry(
                 timestamp = now(),
                 tag = "SU-DENIED",
-                message = "su invocation returned ($idCode): $idOut. Ensure PixelRoot is granted superuser rights in ${manager.displayName}.",
+                message = "su invocation returned ($idCode): $idOut. Open ${detectedPkg ?: manager.displayName} -> Superuser and toggle PixelRoot ON.",
                 isSuccess = false
             )
             if (targetApp != null) {
