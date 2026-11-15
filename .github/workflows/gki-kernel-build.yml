@@ -117,7 +117,7 @@ jobs:
           BUILD_NUMBER: "33515457"
         run: |
           tools/bazel --host_jvm_args=-Xmx2g run \
-            --lto=${{ inputs.lto_mode }} \
+            --lto=${{ inputs.lto_mode }} --nokmi_symbol_list_strict_mode \
             --local_ram_resources=10240 \
             --jobs=4 \
             //common:kernel_aarch64_dist -- --dist_dir=/mnt/gki/out_dist
