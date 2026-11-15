@@ -3,6 +3,14 @@ name: Build Experimental GKI Kernel (5.15.189-android13-8)
 on:
   workflow_dispatch:
     inputs:
+      version_tag:
+        description: 'GKI Version Tag (1.0.0-Zenith or 1.0.0-Encrypted)'
+        required: true
+        default: '1.0.0-Zenith'
+        type: choice
+        options:
+          - 1.0.0-Zenith
+          - 1.0.0-Encrypted
       ksu_variant:
         description: 'KernelSU Variant'
         required: true
@@ -16,16 +24,29 @@ on:
         required: true
         default: 'next'
         type: string
+      lto_mode:
+        description: 'LTO Mode (none = fast/low-RAM, thin = full LTO)'
+        required: true
+        default: 'none'
+        type: choice
+        options:
+          - none
+          - thin
 
 jobs:
   build-gki:
     runs-on: ubuntu-latest
     steps:
-      - name: Maximize Runner Disk Space (/mnt)
+      - name: Maximize Disk Space & Add 8GB Swap (/mnt)
         run: |
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
           sudo mkdir -p /mnt/gki
+          sudo fallocate -l 8G /mnt/swapfile
+          sudo chmod 600 /mnt/swapfile
+          sudo mkswap /mnt/swapfile
+          sudo swapon /mnt/swapfile
           sudo chown -R $USER:$USER /mnt/gki
+          free -h && df -h /mnt
 
       - name: Install Build Dependencies & Google Repo Tool
         run: |
@@ -68,7 +89,7 @@ jobs:
 
           sed -i 's/KMI_GENERATION=.*/KMI_GENERATION=8/' build.config.constants
 
-      - name: Integrate ${{ inputs.ksu_variant }} & Configure Defconfig
+      - name: Integrate ${{ inputs.ksu_variant }} & Set Version (${{ inputs.version_tag }})
         working-directory: /mnt/gki
         run: |
           if [ "${{ inputs.ksu_variant }}" = "KernelSU-Next" ]; then
@@ -86,14 +107,23 @@ jobs:
           sed -i 's/CONFIG_TRIM_UNUSED_KSYMS=y/# CONFIG_TRIM_UNUSED_KSYMS is not set/g' "$DEFCONFIG"
 
           sed -i 's/check_defconfig//g' common/build.config.gki common/build.config.common || true
-          sed -i 's/-dirty//g' common/scripts/setlocalversion || true
 
-      - name: Compile 5.15.189-android13-8-33515457 via Kleaf
+          cat << 'VEREOF' > common/scripts/setlocalversion
+#!/bin/sh
+echo "5.15.189-android13-8-${{ inputs.version_tag }}"
+VEREOF
+          chmod +x common/scripts/setlocalversion
+
+      - name: Compile 5.15.189-android13-8-${{ inputs.version_tag }} via Kleaf
         working-directory: /mnt/gki
         env:
           BUILD_NUMBER: "33515457"
         run: |
-          tools/bazel run //common:kernel_aarch64_dist -- --dist_dir=/mnt/gki/out_dist
+          tools/bazel --host_jvm_args=-Xmx2g run \
+            --lto=${{ inputs.lto_mode }} \
+            --local_ram_resources=10240 \
+            --jobs=4 \
+            //common:kernel_aarch64_dist -- --dist_dir=/mnt/gki/out_dist
 
       - name: Package Kernel Images & AnyKernel3 Zip
         working-directory: /mnt/gki
@@ -109,10 +139,10 @@ jobs:
           sed -i 's/do.devicecheck=1/do.devicecheck=0/g' /mnt/gki/AnyKernel3/anykernel.sh
           sed -i 's/block=\/dev\/block\/platform\/omap\/omap_hsmmc.0\/by-name\/boot;/block=auto;/g' /mnt/gki/AnyKernel3/anykernel.sh
           sed -i 's/is_slot_device=0;/is_slot_device=auto;/g' /mnt/gki/AnyKernel3/anykernel.sh
-          (cd /mnt/gki/AnyKernel3 && zip -r9 "/mnt/gki/artifacts/PixelRoot-5.15.189-android13-8-${{ inputs.ksu_variant }}-AnyKernel3.zip" .)
+          (cd /mnt/gki/AnyKernel3 && zip -r9 "/mnt/gki/artifacts/PixelRoot-5.15.189-android13-8-${{ inputs.version_tag }}-${{ inputs.ksu_variant }}-AnyKernel3.zip" .)
 
       - name: Upload Experimental GKI Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: PixelRoot-5.15.189-android13-8-${{ inputs.ksu_variant }}
+          name: PixelRoot-5.15.189-android13-8-${{ inputs.version_tag }}-${{ inputs.ksu_variant }}
           path: /mnt/gki/artifacts/*
