@@ -35,7 +35,7 @@ jobs:
           curl -s https://storage.googleapis.com/git-repo-downloads/repo > ~/.local/bin/repo
           chmod a+x ~/.local/bin/repo
 
-      - name: Sync android13-5.15 & Pin Sublevel 5.15.189
+      - name: Sync common-android13-5.15 & Pin Sublevel 5.15.189
         working-directory: /mnt/gki
         run: |
           export PATH="$HOME/.local/bin:$PATH"
@@ -43,15 +43,27 @@ jobs:
           git config --global user.email "aszte5349@gmail.com"
           git config --global color.ui false
 
-          repo init --depth=1 -u https://android.googlesource.com/kernel/manifest -b android13-5.15
+          MANIFEST_URL="https://android.googlesource.com/kernel/manifest"
+          if git ls-remote --heads "$MANIFEST_URL" "refs/heads/common-android13-5.15-lts" | grep -q "common-android13-5.15-lts"; then
+            MANIFEST_BRANCH="common-android13-5.15-lts"
+          else
+            MANIFEST_BRANCH="common-android13-5.15"
+          fi
+          echo "Using manifest branch: $MANIFEST_BRANCH"
+
+          repo init --depth=1 -u "$MANIFEST_URL" -b "$MANIFEST_BRANCH"
           repo sync -c -j$(nproc) --no-tags --no-clone-bundle
 
           cd common
-          git fetch --shallow-since="2025-05-01" origin android13-5.15 || true
-          COMMIT_189=$(git log --grep="5.15.189" --format="%H" | head -n 1)
-          if [ -n "$COMMIT_189" ]; then
-            echo "Checking out 5.15.189 commit: $COMMIT_189"
-            git checkout "$COMMIT_189"
+          CURRENT_SUB=$(grep -E '^SUBLEVEL[[:space:]]*=' Makefile | awk '{print $3}')
+          echo "Synced kernel version: 5.15.$CURRENT_SUB"
+          if [ "$CURRENT_SUB" != "189" ]; then
+            git fetch --depth=250 origin android13-5.15-lts || git fetch --depth=250 origin android13-5.15 || true
+            COMMIT_189=$(git log -S "SUBLEVEL = 189" --format="%H" Makefile | tail -n 1)
+            if [ -n "$COMMIT_189" ]; then
+              echo "Checking out exact 5.15.189 commit: $COMMIT_189"
+              git checkout "$COMMIT_189"
+            fi
           fi
 
           sed -i 's/KMI_GENERATION=.*/KMI_GENERATION=8/' build.config.constants
