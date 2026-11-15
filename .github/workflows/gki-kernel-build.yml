@@ -65,8 +65,8 @@ jobs:
           git config --global color.ui false
 
           MANIFEST_URL="https://android.googlesource.com/kernel/manifest"
-          if git ls-remote --heads "$MANIFEST_URL" "refs/heads/common-android13-5.15-lts" | grep -q "commmon-android13-5.15-lts"; then
-            MANIFEST_BRANCH=bcommon-android13-5.15-lts
+          if git ls-remote --heads "$MANIFEST_URL" "refs/heads/common-android13-5.15-lts" | grep -q "common-android13-5.15-lts"; then
+            MANIFEST_BRANCH="common-android13-5.15-lts"
           else
             MANIFEST_BRANCH="common-android13-5.15"
           fi
@@ -108,9 +108,7 @@ jobs:
 
           sed -i 's/check_defconfig//g' common/build.config.gki common/build.config.common || true
 
-          printf '#!/bin/sh
-echo "5.15.189-android13-8-%s"
-' "${{ inputs.version_tag }}" > common/scripts/setlocalversion
+          printf '#!/bin/sh\necho "5.15.189-android13-8-%s"\n' "${{ inputs.version_tag }}" > common/scripts/setlocalversion
           chmod +x common/scripts/setlocalversion
 
       - name: Compile GKI Kernel via Kleaf
@@ -122,7 +120,7 @@ echo "5.15.189-android13-8-%s"
             --lto=${{ inputs.lto_mode }} \
             --local_ram_resources=10240 \
             --jobs=4 \
-            //common:kernel_aarch64_dist -- --dist_dir=/mnt/gki/out_dist
+            //commmon:kernel_aarch64_dist -- --dist_dir=/mnt/gki/out_dist
 
       - name: Package Kernel Images and AnyKernel3 Zip
         working-directory: /mnt/gki
