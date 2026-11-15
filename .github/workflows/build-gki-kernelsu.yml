@@ -1,4 +1,4 @@
-name: Build Experimental GKI Kernel (5.15.189-android13-8)
+name: Build Experimental GKI Kernel
 
 on:
   workflow_dispatch:
@@ -37,7 +37,7 @@ jobs:
   build-gki:
     runs-on: ubuntu-latest
     steps:
-      - name: Maximize Disk Space & Add 8GB Swap (/mnt)
+      - name: Maximize Disk Space and Add 8GB Swap
         run: |
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
           sudo mkdir -p /mnt/gki
@@ -48,7 +48,7 @@ jobs:
           sudo chown -R $USER:$USER /mnt/gki
           free -h && df -h /mnt
 
-      - name: Install Build Dependencies & Google Repo Tool
+      - name: Install Build Dependencies and Google Repo Tool
         run: |
           sudo apt-get update
           sudo apt-get install -y git curl python3 rsync bc bison flex libssl-dev libelf-dev cpio lz4 zstd unzip zip
@@ -56,7 +56,7 @@ jobs:
           curl -s https://storage.googleapis.com/git-repo-downloads/repo > ~/.local/bin/repo
           chmod a+x ~/.local/bin/repo
 
-      - name: Sync common-android13-5.15 & Pin Sublevel 5.15.189
+      - name: Sync common-android13-5.15 and Pin Sublevel 5.15.189
         working-directory: /mnt/gki
         run: |
           export PATH="$HOME/.local/bin:$PATH"
@@ -65,8 +65,8 @@ jobs:
           git config --global color.ui false
 
           MANIFEST_URL="https://android.googlesource.com/kernel/manifest"
-          if git ls-remote --heads "$MANIFEST_URL" "refs/heads/common-android13-5.15-lts" | grep -q "common-android13-5.15-lts"; then
-            MANIFEST_BRANCH="common-android13-5.15-lts"
+          if git ls-remote --heads "$MANIFEST_URL" "refs/heads/common-android13-5.15-lts" | grep -q "commmon-android13-5.15-lts"; then
+            MANIFEST_BRANCH=bcommon-android13-5.15-lts
           else
             MANIFEST_BRANCH="common-android13-5.15"
           fi
@@ -89,7 +89,7 @@ jobs:
 
           sed -i 's/KMI_GENERATION=.*/KMI_GENERATION=8/' build.config.constants
 
-      - name: Integrate ${{ inputs.ksu_variant }} & Set Version (${{ inputs.version_tag }})
+      - name: Integrate KernelSU and Set Version
         working-directory: /mnt/gki
         run: |
           if [ "${{ inputs.ksu_variant }}" = "KernelSU-Next" ]; then
@@ -108,13 +108,12 @@ jobs:
 
           sed -i 's/check_defconfig//g' common/build.config.gki common/build.config.common || true
 
-          cat << 'VEREOF' > common/scripts/setlocalversion
-#!/bin/sh
-echo "5.15.189-android13-8-${{ inputs.version_tag }}"
-VEREOF
+          printf '#!/bin/sh
+echo "5.15.189-android13-8-%s"
+' "${{ inputs.version_tag }}" > common/scripts/setlocalversion
           chmod +x common/scripts/setlocalversion
 
-      - name: Compile 5.15.189-android13-8-${{ inputs.version_tag }} via Kleaf
+      - name: Compile GKI Kernel via Kleaf
         working-directory: /mnt/gki
         env:
           BUILD_NUMBER: "33515457"
@@ -125,7 +124,7 @@ VEREOF
             --jobs=4 \
             //common:kernel_aarch64_dist -- --dist_dir=/mnt/gki/out_dist
 
-      - name: Package Kernel Images & AnyKernel3 Zip
+      - name: Package Kernel Images and AnyKernel3 Zip
         working-directory: /mnt/gki
         run: |
           mkdir -p /mnt/gki/artifacts
