@@ -213,4 +213,69 @@ object RootExecutor {
 
         logs
     }
+
+    /**
+     * Checks whether a root session is currently live. Used by the Temp Root
+     * screen to confirm that a `fastboot boot <image>.img` session (started
+     * from a PC, nothing flashed) actually came up before marking the
+     * session "Active" in the UI. Does not grant, patch, or exploit
+     * anything — it only queries the su daemon that's already running.
+     */
+    suspend fun verifyRootSession(manager: SuManagerType): List<RootLogEntry> =
+        withContext(Dispatchers.IO) {
+            val logs = mutableListOf<RootLogEntry>()
+            logs += RootLogEntry(
+                timestamp = now(),
+                tag = "TEMP-ROOT",
+                message = "Checking for a live su session from the booted image..."
+            )
+
+            val (idCode, idOut) = runSuCommand("id")
+            if (idCode == 0) {
+                logs += RootLogEntry(
+                    timestamp = now(),
+                    tag = "TEMP-ROOT",
+                    message = "Session confirmed -> $idOut",
+                    isSuccess = true
+                )
+                val (verCode, verOut) = runSuCommand("ksud -V || su -v || uname -r")
+                if (verCode == 0 && verOut.isNotBlank()) {
+                    logs += RootLogEntry(
+                        timestamp = now(),
+                        tag = "KERNEL",
+                        message = "Backend signature: $verOut",
+                        isSuccess = true
+                    )
+                }
+            } else {
+                logs += RootLogEntry(
+                    timestamp = now(),
+                    tag = "TEMP-ROOT",
+                    message = "No live session detected ($idCode): $idOut. " +
+                        "Confirm the device shows \"Running\" in ${manager.displayName} " +
+                        "after `fastboot boot`, then verify again.",
+                    isSuccess = false
+                )
+            }
+            logs
+        }
+
+    /**
+     * Ends the current temp-root session by rebooting normally. Since the
+     * boot image was never flashed, the device simply comes back up on its
+     * original stock/permanent boot image with no trace of the session.
+     */
+    suspend fun rebootDevice(): RootLogEntry = withContext(Dispatchers.IO) {
+        val (code, out) = runSuCommand("reboot")
+        RootLogEntry(
+            timestamp = now(),
+            tag = "REBOOT",
+            message = if (code == 0) {
+                "Reboot issued. Temp root will not persist — run `fastboot boot` again next time you need it."
+            } else {
+                "Reboot command failed ($code): $out"
+            },
+            isSuccess = code == 0
+        )
+    }
 }
