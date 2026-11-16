@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Apps
+import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Home
@@ -160,7 +161,7 @@ fun PixelRootScreen(
             )
         },
         bottomBar = {
-            // Material 3 Bottom Bar with Home, Root Log, and Settings trigger
+            // Material 3 Bottom Bar with Home, Temp Root, Root Log, and Settings trigger
             NavigationBar(
                 containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                 contentColor = MaterialTheme.colorScheme.onSurface,
@@ -179,6 +180,16 @@ fun PixelRootScreen(
                 NavigationBarItem(
                     selected = selectedTab == 1 && !showSettingsSheet,
                     onClick = { selectedTab = 1 },
+                    icon = { Icon(Icons.Rounded.Bolt, contentDescription = "Temp Root") },
+                    label = { Text("Temp Root") },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = MaterialTheme.colorScheme.onPrimary,
+                        indicatorColor = MaterialTheme.colorScheme.primary
+                    )
+                )
+                NavigationBarItem(
+                    selected = selectedTab == 2 && !showSettingsSheet,
+                    onClick = { selectedTab = 2 },
                     icon = { Icon(Icons.Rounded.Terminal, contentDescription = "Root Logs") },
                     label = { Text("Root Log") },
                     colors = NavigationBarItemDefaults.colors(
@@ -199,6 +210,12 @@ fun PixelRootScreen(
             }
         }
     ) { innerPadding ->
+        if (selectedTab == 1) {
+            Column(modifier = Modifier.padding(innerPadding)) {
+                TempRootScreen(prefs = prefs, selectedManager = selectedManager)
+            }
+            // Target App Selection Dialog, Settings Sheet still apply below
+        } else {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -360,7 +377,7 @@ fun PixelRootScreen(
                     }
                 }
             } else {
-                // Dedicated Root Log Tab
+                // Dedicated Root Log Tab (selectedTab == 2)
                 item {
                     if (rootLogs.isEmpty()) {
                         Surface(
@@ -408,6 +425,7 @@ fun PixelRootScreen(
                     }
                 }
             }
+        }
         }
     }
 
